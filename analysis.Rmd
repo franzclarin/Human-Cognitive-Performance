@@ -1,0 +1,120 @@
+---
+title: "Human Cognitive Performance"
+author: "Franzgerard Clarin"
+date: "2026-01-29"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Goals
+
+- Understand the effects of diet, stress, exercise on memory_test_score
+
+
+##  Load Data
+
+```{r load_data}
+library(readr)
+
+df <- readr::read_csv("human_cognitive_performance.csv")
+head(df)
+```
+
+```{r summary1}
+summary(df)
+```
+
+```{r summary2}
+colSums(is.na(df))
+```
+
+```{r summary3}
+sapply(df, class)
+```
+```{r summary4}
+sapply(df, function(x) length(unique(x))) 
+```
+
+### Exploratory Data Analysis
+
+```{r eda_univariate_analysis}
+library(ggplot2)
+library(tidyr)
+library(dplyr)
+
+df %>%
+  select(where(is.numeric)) %>%  # Select only numeric columns
+  pivot_longer(everything(), names_to = "variable", values_to = "value") %>%
+  ggplot(aes(x = value)) +
+  geom_histogram(bins = 30, fill = "steelblue", color = "black", alpha = 0.7) +
+  facet_wrap(~ variable, scales = "free") +  # scales = "free" allows different axis ranges
+  labs(title = "Distribution of All Numeric Variables",
+       x = "Value",
+       y = "Frequency") +
+  theme_minimal()
+```
+
+```{r correlation_matrix}
+library(ggplot2)
+library(reshape2)
+library(corrplot)
+
+cor_matrix <- cor(df %>% select(where(is.numeric)), use = "complete.obs")
+
+cor_melted <- melt(cor_matrix)
+
+ggplot(cor_melted, aes(x = Var1, y = Var2, fill = value)) +
+  geom_tile(color = "white") +
+  scale_fill_gradient2(low = "blue", mid = "white", high = "red",
+                       midpoint = 0, limit = c(-1, 1)) +
+  geom_text(aes(label = round(value, 2)), size = 3) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(title = "Correlation Matrix", x = "", y = "", fill = "Correlation")
+```
+
+```{r}
+library(ggplot2)
+library(tidyr)
+library(dplyr)
+
+df %>%
+  select(where(is.numeric)) %>%
+  pivot_longer(cols = -Memory_Test_Score, 
+               names_to = "variable", 
+               values_to = "value") %>%
+  ggplot(aes(x = value, y = Memory_Test_Score)) +
+  geom_point(alpha = 0.3, color = "steelblue", size = 1) +  # Smaller points, more transparent
+  geom_smooth(method = "lm", color = "red", se = TRUE) +  # Only linear trend
+  facet_wrap(~ variable, scales = "free_x") +
+  labs(title = "Memory Test Score vs All Numeric Predictors",
+       x = "Predictor Value",
+       y = "Memory Test Score") +
+  theme_minimal()
+```
+
+
+## Linear Regression
+
+```{r saturated_model}
+# Saturated Model
+mod1 <- lm(Memory_Test_Score ~ Age + Sleep_Duration + Stress_Level + Daily_Screen_Time + Caffeine_Intake + Reaction_Time, data=df)
+summary(mod1)
+```
+
+```{r}
+mod2 <- lm(Memory_Test_Score ~ Sleep_Duration, data=df)
+summary(mod2)
+```
+
+
+
+```{r}
+qqnorm(df$Memory_Test_Score)
+```
+
+
+
